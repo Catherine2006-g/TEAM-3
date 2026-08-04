@@ -38,7 +38,7 @@ This project is being developed as an academic cybersecurity project to demonstr
 ```text
 ThreatLens-AI/
 │
-├── frontend/                  # React frontend
+├── frontend/                  
 │   ├── assets/
 │   ├── components/
 │   ├── pages/
@@ -46,7 +46,7 @@ ThreatLens-AI/
 │   ├── styles/
 │   └── main.jsx
 │
-├── backend/                   # Flask backend
+├── backend/                   
 │   ├── routes/
 │   ├── controllers/
 │   ├── models/
@@ -61,7 +61,7 @@ ThreatLens-AI/
 │   ├── uploads/
 │   └── main.py
 │
-├── database/                  # PostgreSQL database
+├── database/                  
 │   ├── schema.sql
 │   ├── seed.sql
 │   └── migrations/
