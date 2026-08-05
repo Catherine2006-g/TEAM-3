@@ -30,6 +30,8 @@ Thumbs.db
 *.zip
 *.tar
 *.gz
+*.db
+backend/uploads/
 
 # Keep the trained model requested for v1.0
 !ml_engine/model/lightgbm_model_v1.0.pkl
