@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data and large artifacts
+*.npy
+*.pkl
+*.pt
+*.ckpt
+*.h5
+*.joblib
+*.zip
+*.tar
+*.gz
+
+# Keep the trained model requested for v1.0
+!ml_engine/model/lightgbm_model_v1.0.pkl
+
+# Dataset files
+labeled_train.jsonl
+merged_train.jsonl
+train_features_*.jsonl
+test_features.jsonl
+X_train.npy
+y_train.npy
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# EMBER dataset and caches
+ember/
+*.jsonl
