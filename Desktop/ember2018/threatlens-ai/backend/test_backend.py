@@ -1,4 +1,5 @@
 import sys
+import uuid
 from pathlib import Path
 
 # Add backend directory to sys.path
@@ -16,6 +17,8 @@ from app.main import app
 
 client = TestClient(app)
 
+TEST_USER = f"analyst_{uuid.uuid4().hex[:4]}"
+
 def test_health():
     response = client.get("/api/health")
     assert response.status_code == 200
@@ -25,8 +28,8 @@ def test_health():
 
 def test_register():
     payload = {
-        "username": "analyst_modular",
-        "email": "analyst@threatlens.ai",
+        "username": TEST_USER,
+        "email": f"{TEST_USER}@threatlens.ai",
         "password": "SecurePassword123!",
         "role": "Security Analyst",
         "full_name": "Modular Security Analyst"
@@ -34,13 +37,13 @@ def test_register():
     response = client.post("/api/auth/register", json=payload)
     assert response.status_code == 200
     data = response.json()
-    assert data["user"]["username"] == "analyst_modular"
+    assert data["user"]["username"] == TEST_USER
     assert data["user"]["role"] == "Security Analyst"
     print("[PASS] User Registration")
 
 def test_login():
     payload = {
-        "username": "analyst_modular",
+        "username": TEST_USER,
         "password": "SecurePassword123!"
     }
     response = client.post("/api/auth/login", json=payload)
@@ -50,10 +53,10 @@ def test_login():
     print("[PASS] User Login & Token Generation")
 
 def test_profile():
-    response = client.get("/api/auth/me?username=analyst_modular")
+    response = client.get(f"/api/auth/me?username={TEST_USER}")
     assert response.status_code == 200
     data = response.json()
-    assert data["username"] == "analyst_modular"
+    assert data["username"] == TEST_USER
     print("[PASS] Profile Lookup")
 
 def test_file_upload_scan():
@@ -65,7 +68,7 @@ def test_file_upload_scan():
     files = {
         "file": ("suspicious_invoice.exe", sample_content, "application/octet-stream")
     }
-    response = client.post("/api/upload/scan?username=analyst_modular", files=files)
+    response = client.post(f"/api/upload/scan?username={TEST_USER}", files=files)
     assert response.status_code == 200
     data = response.json()
     
