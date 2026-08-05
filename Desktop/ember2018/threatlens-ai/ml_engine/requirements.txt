@@ -1,0 +1,7 @@
+lightgbm
+joblib
+numpy
+scikit-learn
+matplotlib
+yara-python
+lief
