@@ -1,0 +1,1 @@
+{"engine_name":"ThreatLens Malware Detection Engine","version":"1.0.0","algorithm":"LightGBM","dataset":"EMBER 2018","features":2381,"accuracy":"95.11%","precision":"95.23%","recall":"94.98%","f1":"95.10%","roc_auc":"98.99%","creation_date":"2026-08-05"}
