@@ -1,0 +1,3 @@
+# Placeholder requirements for future backend integration
+fastapi
+uvicorn
