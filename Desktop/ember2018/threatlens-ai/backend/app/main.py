@@ -6,7 +6,7 @@ from app.database import init_db
 
 app = FastAPI(
     title="ThreatLens AI Backend",
-    description="Modular Backend Service for User Authentication & File Upload Static Analysis (Review 1 / Milestone 1)",
+    description="Modular Backend Service for User Authentication & File Upload Static Analysis",
     version="1.0.0"
 )
 
@@ -32,7 +32,7 @@ def root():
     return {
         "status": "online",
         "service": "ThreatLens AI Backend",
-        "review_milestone": "Review 1 / Milestone 1 (Auth + File Upload)",
+        "review_milestone": "Review 2 / Milestone 2 (Auth + File Upload)",
         "docs": "/docs"
     }
 

@@ -18,11 +18,21 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
+            password TEXT,
+            password_hash TEXT,
+            salt TEXT,
             role TEXT NOT NULL DEFAULT 'Security Analyst',
             full_name TEXT
         )
     ''')
+    
+    # Check if existing database needs schema migration for password_hash and salt
+    cursor.execute("PRAGMA table_info(users)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "password_hash" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
+    if "salt" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN salt TEXT")
     
     # 2. File Scans Table (File Upload & Static Analysis)
     cursor.execute('''

@@ -1,10 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 class UserRegister(BaseModel):
-    username: str
+    username: str = Field(..., min_length=3, description="Username must be at least 3 characters")
     email: str
-    password: str
+    password: str = Field(..., min_length=6, description="Password must be at least 6 characters")
     role: str = "Security Analyst"  # Security Analyst, SOC Team Member, Administrator, Researcher
     full_name: Optional[str] = ""
 
@@ -18,3 +18,9 @@ class UserProfile(BaseModel):
     email: str
     role: str
     full_name: Optional[str] = ""
+
+class TokenResponse(BaseModel):
+    status: str
+    access_token: str
+    token_type: str = "bearer"
+    user: UserProfile
