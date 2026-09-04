@@ -22,5 +22,10 @@ class UserProfile(BaseModel):
 class TokenResponse(BaseModel):
     status: str
     access_token: str
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
     user: UserProfile
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+

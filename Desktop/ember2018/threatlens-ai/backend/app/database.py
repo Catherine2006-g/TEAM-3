@@ -34,7 +34,18 @@ def init_db():
     if "salt" not in columns:
         cursor.execute("ALTER TABLE users ADD COLUMN salt TEXT")
     
-    # 2. File Scans Table (File Upload & Static Analysis)
+    # 2. Refresh Tokens Table (Milestone 3 Token Rotation)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS refresh_tokens (
+            token TEXT PRIMARY KEY,
+            username TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            revoked INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    ''')
+
+    # 3. File Scans Table (File Upload, Static/Dynamic Analysis & Async Pipeline)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS file_scans (
             id TEXT PRIMARY KEY,
@@ -43,10 +54,40 @@ def init_db():
             file_type TEXT NOT NULL,
             md5 TEXT NOT NULL,
             sha256 TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'COMPLETED',
             verdict TEXT NOT NULL,
             risk_score INTEGER NOT NULL,
+            confidence_score REAL DEFAULT 0.0,
+            static_analysis_json TEXT,
+            dynamic_analysis_json TEXT,
             uploaded_by TEXT NOT NULL,
             upload_time TEXT NOT NULL
+        )
+    ''')
+    
+    # Check if existing database needs schema migration for file_scans columns
+    cursor.execute("PRAGMA table_info(file_scans)")
+    scan_cols = [row[1] for row in cursor.fetchall()]
+    if "status" not in scan_cols:
+        cursor.execute("ALTER TABLE file_scans ADD COLUMN status TEXT DEFAULT 'COMPLETED'")
+    if "confidence_score" not in scan_cols:
+        cursor.execute("ALTER TABLE file_scans ADD COLUMN confidence_score REAL DEFAULT 0.0")
+    if "static_analysis_json" not in scan_cols:
+        cursor.execute("ALTER TABLE file_scans ADD COLUMN static_analysis_json TEXT")
+    if "dynamic_analysis_json" not in scan_cols:
+        cursor.execute("ALTER TABLE file_scans ADD COLUMN dynamic_analysis_json TEXT")
+
+    # 4. Audit Logs Table (Milestone 4 Governance & Security Audit Trail)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            role TEXT NOT NULL,
+            action TEXT NOT NULL,
+            resource TEXT NOT NULL,
+            details TEXT,
+            status TEXT NOT NULL,
+            timestamp TEXT NOT NULL
         )
     ''')
     
@@ -55,3 +96,4 @@ def init_db():
 
 # Initialize tables
 init_db()
+

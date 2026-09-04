@@ -20,3 +20,15 @@ class ScanResponse(BaseModel):
     detection: DetectionResult
     uploaded_by: str
     timestamp: str
+
+class AsyncScanResponse(BaseModel):
+    scan_id: str
+    filename: str
+    status: str
+    message: str
+
+class SandboxTriggerResponse(BaseModel):
+    scan_id: str
+    sandbox_status: str
+    dynamic_analysis: Dict[str, Any]
+
