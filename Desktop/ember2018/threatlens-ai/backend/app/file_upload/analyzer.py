@@ -5,12 +5,20 @@ import datetime
 from pathlib import Path
 from typing import Dict, Any
 
-# Optional YARA scanner import
+# Optional YARA scanner and ML engine imports
 try:
     from ml_engine.engine.yara_scanner import scan_with_yara
     HAS_YARA = True
 except Exception:
     HAS_YARA = False
+
+try:
+    from ml_engine.engine.scanner import MalwareScanner
+    ml_scanner_instance = MalwareScanner()
+    HAS_ML_ENGINE = True
+except Exception:
+    HAS_ML_ENGINE = False
+
 
 def run_basic_static_analysis(file_path: Path, filename: str, username: str) -> Dict[str, Any]:
     """
@@ -42,7 +50,17 @@ def run_basic_static_analysis(file_path: Path, filename: str, username: str) -> 
         except Exception:
             pass
             
-    # 4. Basic String Indicators
+    # 4. ML Engine Prediction (if available)
+    ml_info = None
+    if HAS_ML_ENGINE and is_exe:
+        try:
+            ml_res = ml_scanner_instance.scan(str(file_path))
+            if ml_res.get("scan_status") == "SUCCESS":
+                ml_info = ml_res.get("ml")
+        except Exception:
+            pass
+
+    # 5. Basic String Indicators
     suspicious_indicators = []
     content_lower = file_bytes.lower()
     
@@ -53,8 +71,8 @@ def run_basic_static_analysis(file_path: Path, filename: str, username: str) -> 
     if b"http://" in content_lower or b"https://" in content_lower:
         suspicious_indicators.append("Embedded remote network URL found")
         
-    # 5. Risk Scoring & Verdict
-    if yara_matches or len(suspicious_indicators) >= 2:
+    # 6. Risk Scoring & Verdict
+    if yara_matches or len(suspicious_indicators) >= 2 or (ml_info and ml_info.get("prediction") == "MALWARE"):
         risk_score = 85
         verdict = "MALWARE"
     elif len(suspicious_indicators) == 1 or is_exe:
@@ -67,7 +85,7 @@ def run_basic_static_analysis(file_path: Path, filename: str, username: str) -> 
     scan_id = f"SCAN-{uuid.uuid4().hex[:6].upper()}"
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    return {
+    analysis_payload = {
         "scan_id": scan_id,
         "filename": filename,
         "file_size": file_size,
@@ -89,3 +107,8 @@ def run_basic_static_analysis(file_path: Path, filename: str, username: str) -> 
         "uploaded_by": username,
         "timestamp": now_str
     }
+    if ml_info:
+        analysis_payload["static_analysis"]["ml_engine"] = ml_info
+
+    return analysis_payload
+
