@@ -180,10 +180,55 @@ def test_rbac_matrix_enforcement():
     print("[PASS] Milestone 4: RBAC Matrix & Governance Enforcement (Analyst, SOC, Admin)")
 
 def test_logout():
+    global ANALYST_ACCESS_TOKEN
     headers = {"Authorization": f"Bearer {ANALYST_ACCESS_TOKEN}"}
     response = client.post("/api/auth/logout", headers=headers)
     assert response.status_code == 200
-    print("[PASS] Logout & Session Revocation")
+    
+    # Requesting protected endpoint with revoked access token must now be rejected (401)
+    revoked_resp = client.get("/api/auth/me", headers=headers)
+    assert revoked_resp.status_code == 401
+    print("[PASS] Logout & Session Revocation Verification (401 on Revoked Token)")
+
+def test_edge_cases():
+    # 1. Duplicate Username Registration Rejection
+    dup_resp = client.post("/api/auth/register", json={
+        "username": TEST_USER,
+        "email": "unique_email@threatlens.ai",
+        "password": TEST_PASSWORD,
+        "role": "Security Analyst"
+    })
+    assert dup_resp.status_code == 400
+
+    # 2. Re-login Analyst to obtain fresh token for upload edge cases
+    login_resp = client.post("/api/auth/login", json={"username": TEST_USER, "password": TEST_PASSWORD}).json()
+    token = login_resp["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 3. Empty 0-Byte File Upload Rejection
+    empty_files = {"file": ("empty.exe", b"", "application/octet-stream")}
+    empty_resp = client.post("/api/upload/scan", files=empty_files, headers=headers)
+    assert empty_resp.status_code == 400
+
+    # 4. Oversized (>50MB) File Upload Rejection
+    oversized_content = b"A" * (50 * 1024 * 1024 + 100)
+    over_files = {"file": ("huge_payload.iso", oversized_content, "application/octet-stream")}
+    over_resp = client.post("/api/upload/scan", files=over_files, headers=headers)
+    assert over_resp.status_code in [400, 413]
+
+    # 5. List Scans History Retrieval
+    scans_list_resp = client.get("/api/upload/scans", headers=headers)
+    assert scans_list_resp.status_code == 200
+    assert scans_list_resp.json()["total_scans"] >= 1
+
+    # 6. Audit Log Action Filtering for Administrator
+    admin_headers = {"Authorization": f"Bearer {ADMIN_ACCESS_TOKEN}"}
+    audit_filter_resp = client.get("/api/audit/logs?action=LOGIN", headers=admin_headers)
+    assert audit_filter_resp.status_code == 200
+    filtered_logs = audit_filter_resp.json()["logs"]
+    assert all(log["action"] == "LOGIN" for log in filtered_logs)
+
+    print("[PASS] Robustness & Edge-Case Input Rejection Tests (0-Byte, Oversized, Duplicate Auth, Audit Filtering)")
 
 if __name__ == "__main__":
     print("=== Testing ThreatLens AI Backend (Milestones 1 through 4 Evaluation) ===")
@@ -197,5 +242,7 @@ if __name__ == "__main__":
     test_sandbox_dynamic_analysis()
     test_rbac_matrix_enforcement()
     test_logout()
-    print("=== ALL MILESTONE 1 - 4 TESTS PASSED SUCCESSFULLY! ===")
+    test_edge_cases()
+    print("=== ALL MILESTONE 1 - 4 & EDGE CASE TESTS PASSED SUCCESSFULLY! ===")
+
 

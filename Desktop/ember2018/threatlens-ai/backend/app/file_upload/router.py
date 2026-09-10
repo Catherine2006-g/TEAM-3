@@ -10,6 +10,14 @@ from app.config import UPLOAD_DIR
 from app.database import get_db
 from app.auth.router import get_current_user, require_roles
 from app.file_upload.analyzer import run_basic_static_analysis, process_async_scan, run_dynamic_sandbox_analysis
+from app.file_upload.schemas import (
+    ScanResponse,
+    AsyncScanResponse,
+    SandboxTriggerResponse,
+    ScanListResponse,
+    ScanItemResponse,
+    MessageResponse
+)
 from app.audit.service import log_audit_event
 
 router = APIRouter(prefix="/api/upload", tags=["File Upload & Static/Dynamic Analysis"])
@@ -17,7 +25,7 @@ router = APIRouter(prefix="/api/upload", tags=["File Upload & Static/Dynamic Ana
 MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB limit
 ALLOWED_UPLOAD_ROLES = ["Administrator", "Security Analyst", "Researcher"]
 
-@router.post("/scan")
+@router.post("/scan", response_model=ScanResponse)
 async def scan_file(
     file: UploadFile = File(...),
     current_user: dict = Depends(require_roles(ALLOWED_UPLOAD_ROLES))
@@ -55,18 +63,19 @@ async def scan_file(
     try:
         result = run_basic_static_analysis(file_path, safe_filename, username)
         ml_data = result.get("static_analysis", {}).get("ml_engine", {})
-        conf_score = ml_data.get("malware_probability", 0.0) / 100.0 if ml_data else 0.85
+        conf_score = (ml_data.get("malware_probability", 0.0) / 100.0) if ml_data else 0.85
         
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO file_scans (id, filename, file_size, file_type, md5, sha256, status, verdict, risk_score, confidence_score, static_analysis_json, uploaded_by, upload_time)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO file_scans (id, filename, file_path, file_size, file_type, md5, sha256, status, verdict, risk_score, confidence_score, static_analysis_json, uploaded_by, upload_time)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 result["scan_id"],
                 result["filename"],
+                str(file_path),
                 result["file_size"],
                 result["file_type"],
                 result["hashes"]["md5"],
@@ -90,7 +99,7 @@ async def scan_file(
         log_audit_event(username, current_user["role"], "FILE_UPLOAD_SCAN", safe_filename, f"Static analysis error: {str(e)}", "FAILED")
         raise HTTPException(status_code=500, detail=f"File analysis error: {str(e)}")
 
-@router.post("/scan/async")
+@router.post("/scan/async", response_model=AsyncScanResponse)
 async def scan_file_async(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
@@ -129,10 +138,10 @@ async def scan_file_async(
     cursor = conn.cursor()
     cursor.execute(
         """
-        INSERT INTO file_scans (id, filename, file_size, file_type, md5, sha256, status, verdict, risk_score, confidence_score, uploaded_by, upload_time)
-        VALUES (?, ?, ?, ?, ?, ?, 'PENDING', 'PENDING', 0, 0.0, ?, ?)
+        INSERT INTO file_scans (id, filename, file_path, file_size, file_type, md5, sha256, status, verdict, risk_score, confidence_score, uploaded_by, upload_time)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', 'PENDING', 0, 0.0, ?, ?)
         """,
-        (scan_id, safe_filename, len(file_bytes), file_type, md5_hash, sha256_hash, username, now_str)
+        (scan_id, safe_filename, str(file_path), len(file_bytes), file_type, md5_hash, sha256_hash, username, now_str)
     )
     conn.commit()
     conn.close()
@@ -149,7 +158,7 @@ async def scan_file_async(
         "message": "File upload accepted. Asynchronous EMBER feature extraction is running in background."
     }
 
-@router.post("/scans/{scan_id}/sandbox")
+@router.post("/scans/{scan_id}/sandbox", response_model=SandboxTriggerResponse)
 def trigger_sandbox_analysis(
     scan_id: str,
     current_user: dict = Depends(require_roles(ALLOWED_UPLOAD_ROLES))
@@ -170,9 +179,13 @@ def trigger_sandbox_analysis(
     scan_record = dict(row)
     filename = scan_record["filename"]
     
-    # Locate file on disk or search UPLOAD_DIR
-    matching_files = list(UPLOAD_DIR.glob(f"*_{filename}"))
-    file_path = matching_files[0] if matching_files else UPLOAD_DIR / filename
+    # Locate exact file using stored file_path or fallback to directory matching
+    stored_path_str = scan_record.get("file_path")
+    if stored_path_str and Path(stored_path_str).exists():
+        file_path = Path(stored_path_str)
+    else:
+        matching_files = list(UPLOAD_DIR.glob(f"*_{filename}"))
+        file_path = matching_files[0] if matching_files else UPLOAD_DIR / filename
     
     dynamic_res = run_dynamic_sandbox_analysis(scan_id, file_path)
     
@@ -184,7 +197,7 @@ def trigger_sandbox_analysis(
         "dynamic_analysis": dynamic_res
     }
 
-@router.get("/scans")
+@router.get("/scans", response_model=ScanListResponse)
 def list_scans(current_user: dict = Depends(get_current_user)):
     """Retrieve history of uploaded file scans (Requires Authentication)"""
     conn = get_db()
@@ -213,7 +226,7 @@ def list_scans(current_user: dict = Depends(get_current_user)):
         "scans": scans_list
     }
 
-@router.get("/scans/{scan_id}")
+@router.get("/scans/{scan_id}", response_model=ScanItemResponse)
 def get_scan_detail(scan_id: str, current_user: dict = Depends(get_current_user)):
     """Retrieve details for a specific scan ID"""
     conn = get_db()
@@ -239,7 +252,7 @@ def get_scan_detail(scan_id: str, current_user: dict = Depends(get_current_user)
             
     return item
 
-@router.delete("/scans/{scan_id}")
+@router.delete("/scans/{scan_id}", response_model=MessageResponse)
 def delete_scan(
     scan_id: str,
     current_user: dict = Depends(require_roles(["Administrator"]))
@@ -266,4 +279,5 @@ def delete_scan(
         "status": "success",
         "message": f"Scan record '{scan_id}' deleted successfully by Administrator."
     }
+
 

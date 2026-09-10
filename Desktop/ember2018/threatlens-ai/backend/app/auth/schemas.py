@@ -3,9 +3,9 @@ from typing import Optional
 
 class UserRegister(BaseModel):
     username: str = Field(..., min_length=3, description="Username must be at least 3 characters")
-    email: str
+    email: str = Field(..., description="User email address")
     password: str = Field(..., min_length=6, description="Password must be at least 6 characters")
-    role: str = "Security Analyst"  # Security Analyst, SOC Team Member, Administrator, Researcher
+    role: str = Field("Security Analyst", description="Role: Security Analyst, SOC Team Member, Administrator, Researcher")
     full_name: Optional[str] = ""
 
 class UserLogin(BaseModel):
@@ -19,6 +19,11 @@ class UserProfile(BaseModel):
     role: str
     full_name: Optional[str] = ""
 
+class UserRegisterResponse(BaseModel):
+    status: str
+    message: str
+    user: dict
+
 class TokenResponse(BaseModel):
     status: str
     access_token: str
@@ -28,4 +33,9 @@ class TokenResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+class MessageResponse(BaseModel):
+    status: str
+    message: str
+
 

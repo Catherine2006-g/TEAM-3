@@ -97,7 +97,8 @@ def run_basic_static_analysis(file_path: Path, filename: str, username: str) -> 
         "static_analysis": {
             "yara_matches": yara_matches,
             "suspicious_indicators": suspicious_indicators,
-            "is_executable": is_exe
+            "is_executable": is_exe,
+            "ml_engine": ml_info
         },
         "detection": {
             "risk_score": risk_score,

@@ -50,6 +50,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS file_scans (
             id TEXT PRIMARY KEY,
             filename TEXT NOT NULL,
+            file_path TEXT,
             file_size INTEGER NOT NULL,
             file_type TEXT NOT NULL,
             md5 TEXT NOT NULL,
@@ -68,6 +69,8 @@ def init_db():
     # Check if existing database needs schema migration for file_scans columns
     cursor.execute("PRAGMA table_info(file_scans)")
     scan_cols = [row[1] for row in cursor.fetchall()]
+    if "file_path" not in scan_cols:
+        cursor.execute("ALTER TABLE file_scans ADD COLUMN file_path TEXT")
     if "status" not in scan_cols:
         cursor.execute("ALTER TABLE file_scans ADD COLUMN status TEXT DEFAULT 'COMPLETED'")
     if "confidence_score" not in scan_cols:

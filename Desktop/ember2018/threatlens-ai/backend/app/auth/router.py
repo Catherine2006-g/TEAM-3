@@ -1,7 +1,15 @@
 import uuid
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.auth.schemas import UserRegister, UserLogin, UserProfile, TokenResponse, RefreshTokenRequest
+from app.auth.schemas import (
+    UserRegister,
+    UserLogin,
+    UserProfile,
+    UserRegisterResponse,
+    TokenResponse,
+    RefreshTokenRequest,
+    MessageResponse
+)
 from app.auth.security import hash_password, verify_password, create_access_token, create_refresh_token, rotate_refresh_token, get_user_from_token, revoke_token
 from app.database import get_db
 from app.audit.service import log_audit_event
@@ -65,7 +73,7 @@ def require_roles(allowed_roles: list):
         return current_user
     return role_checker
 
-@router.post("/register")
+@router.post("/register", response_model=UserRegisterResponse)
 def register(user_data: UserRegister):
     """Register a new user account with role selection & PBKDF2 password hashing"""
     conn = get_db()
@@ -107,7 +115,7 @@ def register(user_data: UserRegister):
         }
     }
 
-@router.post("/login")
+@router.post("/login", response_model=TokenResponse)
 def login(login_data: UserLogin):
     """Authenticate user credentials and return Bearer access token & refresh token"""
     conn = get_db()
@@ -152,7 +160,7 @@ def login(login_data: UserLogin):
         }
     }
 
-@router.post("/refresh")
+@router.post("/refresh", response_model=TokenResponse)
 def refresh(refresh_req: RefreshTokenRequest):
     """
     Milestone 3: Refresh Token Rotation Endpoint.
@@ -181,12 +189,12 @@ def refresh(refresh_req: RefreshTokenRequest):
         "user": user
     }
 
-@router.get("/me")
+@router.get("/me", response_model=UserProfile)
 def profile(current_user: dict = Depends(get_current_user)):
     """Get authenticated profile details of logged in user"""
     return current_user
 
-@router.post("/logout")
+@router.post("/logout", response_model=MessageResponse)
 def logout(credentials: HTTPAuthorizationCredentials = Depends(security_scheme)):
     """Revoke current Bearer access token"""
     if not credentials or not credentials.credentials:

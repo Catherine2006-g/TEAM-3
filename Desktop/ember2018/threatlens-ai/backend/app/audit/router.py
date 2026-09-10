@@ -1,13 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from app.auth.router import get_current_user
+from app.audit.schemas import AuditLogListResponse
 from app.database import get_db
 
 router = APIRouter(prefix="/api/audit", tags=["Audit & Security Logs"])
 
-@router.get("/logs")
+@router.get("/logs", response_model=AuditLogListResponse)
 def get_audit_logs(
-    limit: int = 100,
-    action: str = None,
+    limit: int = Query(100, description="Maximum number of logs to return"),
+    action: str = Query(None, description="Optional action filter e.g. LOGIN, FILE_UPLOAD_SCAN"),
     current_user: dict = Depends(get_current_user)
 ):
     """
